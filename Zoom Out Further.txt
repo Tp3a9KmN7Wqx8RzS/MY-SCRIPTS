@@ -1,0 +1,16 @@
+-- Function to check if the game is fully loaded
+local function isGameFullyLoaded()
+    return game:IsLoaded()
+end
+
+-- Function to wait for the game to fully load
+local function waitForGameLoad()
+    repeat
+    wait()
+    until isGameFullyLoaded()
+end
+
+-- Call the function to wait for the game to fully load
+waitForGameLoad()
+
+game.Players.LocalPlayer.CameraMaxZoomDistance = 500

@@ -1,0 +1,176 @@
+wait(1)
+
+local player = game.Players.LocalPlayer
+local attachToPlayer = nil
+local attached = false
+local platform = nil
+local followPlatform = false
+local emotePlaying = false
+local toggleKey = Enum.KeyCode.H -- Change this to the desired hotkey
+local humanoidRootPart = player.Character and player.Character:WaitForChild("HumanoidRootPart")
+
+local UserInputService = game:GetService("UserInputService")
+local TextBoxFocused = false
+
+-- Check if the chat box is focused
+UserInputService.TextBoxFocused:Connect(function()
+    TextBoxFocused = true
+end)
+
+UserInputService.TextBoxFocusReleased:Connect(function()
+    TextBoxFocused = false
+end)
+
+local function findNearestPlayer()
+    local closestDistance = math.huge
+    local nearestPlayer = nil
+    
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= player then
+            local distance = (p.Character and p.Character:FindFirstChild("HumanoidRootPart") and (p.Character.HumanoidRootPart.Position - (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position)).magnitude) or math.huge
+            if distance < closestDistance then
+                closestDistance = distance
+                nearestPlayer = p
+            end
+        end
+    end
+    
+    return nearestPlayer
+end
+
+local function attachToNearestPlayer()
+    local nearestPlayer = findNearestPlayer()
+    if nearestPlayer then
+        attachToPlayer = nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if attachToPlayer then
+            humanoidRootPart.CFrame = attachToPlayer.CFrame * CFrame.new(0, 0, -5) -- Adjust distance as needed
+            attached = true
+        end
+    end
+end
+
+local function moveBackAndForth()
+    if attached and attachToPlayer then
+        local speed = 25 -- Adjust speed as needed
+        local distance = 5 -- Adjust distance as needed
+        local offset = math.sin(tick() * speed) * distance
+        humanoidRootPart.CFrame = attachToPlayer.CFrame * CFrame.new(0, 0, -5 - offset) -- Adjust distance as needed
+    end
+end
+
+local function toggleAttachment()
+    attached = not attached
+    if attached then
+        attachToNearestPlayer()
+    else
+        attachToPlayer = nil
+    end
+end
+
+local function createPlatform()
+    platform = Instance.new("Part")
+    platform.Size = Vector3.new(6, 0.4, 6) -- Adjust size as needed
+    platform.Color = Color3.new(0, 1, 0) -- Adjust color as needed
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 100
+    platform.Parent = workspace
+    
+    -- Set the position under the character's feet
+    if player.Character then
+        local character = player.Character
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            local yOffset = (character.Humanoid.HipHeight + humanoidRootPart.Size.Y) / 2 - 0.9 -- Lowering the platform further
+            platform.Position = humanoidRootPart.Position - Vector3.new(0, yOffset, 0)
+        end
+    end
+end
+
+local function followPlayer()
+    if platform and player.Character then
+        local character = player.Character
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            local yOffset = (character.Humanoid.HipHeight + humanoidRootPart.Size.Y) / 2 - -1 -- Lowering the platform further
+            platform.Position = humanoidRootPart.Position - Vector3.new(0, yOffset, 0)
+        end
+    end
+end
+
+local function togglePlatform()
+    followPlatform = not followPlatform
+    if followPlatform then
+        createPlatform()
+    else
+        if platform then
+            platform:Destroy()
+            platform = nil
+        end
+    end
+end
+
+local function playEmote(emoteId)
+    local character = player.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local description = humanoid:FindFirstChildOfClass("HumanoidDescription")
+
+        if description then
+            description:AddEmote("CustomEmoteG", emoteId)
+            humanoid:PlayEmote("CustomEmoteG")
+        else
+            warn("HumanoidDescription not found.")
+        end
+    else
+        warn("Character or Humanoid not found.")
+    end
+end
+
+local function toggleEmote()
+    emotePlaying = not emotePlaying
+    if emotePlaying then
+        wait(0) -- Delay before playing emote
+        local emoteIdH = 4689362868 -- Example emote ID for hotkey H (replace this with your desired emote ID)
+        playEmote(emoteIdH)
+    end
+end
+
+local function onKeyPress(input)
+    -- Check if the input is a chat command or if the chat box is focused
+    if input.KeyCode == Enum.KeyCode.Slash or TextBoxFocused then
+        return  -- Don't toggle anything if it's a chat command or if the chat box is focused
+    end
+    
+    -- Toggle attachment, platform, and emote if it's not a chat command and the chat box is not focused
+    if input.KeyCode == toggleKey then
+        toggleAttachment()
+        togglePlatform()
+        toggleEmote()
+    end
+end
+
+local function updatePlatform()
+    if followPlatform then
+        followPlayer()
+    end
+end
+
+game:GetService("UserInputService").InputBegan:Connect(onKeyPress)
+game:GetService("RunService").Stepped:Connect(moveBackAndForth)
+game:GetService("RunService").RenderStepped:Connect(updatePlatform)
+
+-- Check for character reset
+player.CharacterAdded:Connect(function(character)
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    if followPlatform then
+        createPlatform()
+    end
+end)
+
+if player.Character then
+    humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
+    if followPlatform then
+        createPlatform()
+    end
+end

@@ -1,0 +1,63 @@
+-- Define the variables for teleportation behavior
+local teleportDistance = 20 -- Distance of each teleportation
+local teleportSpeed = 300 -- Speed of teleportation
+
+-- Retrieve the player and their character
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Variables to track teleportation status and store initial position and orientation
+local isTeleporting = false
+local initialPosition
+local initialOrientation
+
+-- Function for continuous left-to-right teleportation
+local function teleportLeftToRight()
+    local direction = 1 -- 1 for right, -1 for left
+    while isTeleporting do
+        -- Calculate target position based on initial position and teleportation distance relative to facing direction
+        local targetPosition = initialPosition + humanoidRootPart.CFrame.rightVector * direction * teleportDistance
+        -- Set humanoid root part's position to the target position
+        humanoidRootPart.CFrame = CFrame.new(targetPosition, targetPosition + initialOrientation.LookVector)
+        -- Calculate wait time based on speed and distance
+        local waitTime = teleportDistance / teleportSpeed
+        -- Wait for the calculated time
+        wait(waitTime)
+        -- Reverse direction
+        direction = direction * -1
+    end
+end
+
+-- Function to toggle teleportation on/off
+local function toggleTeleportation()
+    isTeleporting = not isTeleporting -- Toggle teleportation status
+    
+    -- Freeze or unfreeze the camera depending on teleportation status
+    local camera = game.Workspace.CurrentCamera
+    camera.CameraType = isTeleporting and Enum.CameraType.Scriptable or Enum.CameraType.Custom
+    
+    -- If toggling on, store initial position and orientation, then start teleportation
+    if isTeleporting then
+        initialPosition = humanoidRootPart.Position
+        initialOrientation = CFrame.new(humanoidRootPart.Position, humanoidRootPart.Position + humanoidRootPart.CFrame.lookVector)
+        teleportLeftToRight()
+    else
+        -- If toggling off, return character to initial position and orientation
+        humanoidRootPart.CFrame = CFrame.new(initialPosition)
+        -- Adjust the character's facing direction back to the original orientation
+        humanoidRootPart.CFrame = CFrame.new(initialPosition, initialPosition + initialOrientation.LookVector)
+    end
+end
+
+-- Create a GUI button to toggle teleportation
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Text = "Toggle Teleportation"
+button.Size = UDim2.new(0, 200, 0, 40)
+button.Position = UDim2.new(0.5, -310, 0.9, -20)
+button.Parent = gui
+
+button.MouseButton1Click:Connect(toggleTeleportation)

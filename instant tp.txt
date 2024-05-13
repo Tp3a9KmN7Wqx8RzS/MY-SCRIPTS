@@ -1,0 +1,46 @@
+wait(1)
+
+local UIS = game:GetService("UserInputService")
+local Player = game.Players.LocalPlayer
+local Mouse = Player:GetMouse()
+local Camera = game.Workspace.CurrentCamera -- Get the current camera
+
+-- Define a function to get the character
+function GetCharacter()
+    return game.Players.LocalPlayer.Character
+end
+
+-- Define the teleport function
+function Teleport(pos)
+    local Char = GetCharacter()
+    if Char then
+        -- Save the current orientation
+        local orientation = Char.HumanoidRootPart.CFrame - Char.HumanoidRootPart.Position
+
+        -- Freeze the camera
+        Camera.CameraType = Enum.CameraType.Scriptable
+
+        -- Teleport the character way out of the map
+        Char:SetPrimaryPartCFrame(CFrame.new(Vector3.new(33000000, 33000000, 33000000)))
+
+        -- Wait a short time to ensure the character is teleported
+        wait(0.1)
+
+        -- Adjust the position to teleport 1 cm higher
+        pos = pos + Vector3.new(0, 2.5, 0)
+
+        -- Restore the orientation
+        Char:SetPrimaryPartCFrame(CFrame.new(pos) * orientation)
+
+        -- Restore the camera
+        Camera.CameraType = Enum.CameraType.Custom
+    end
+end
+
+-- Connect to the input event
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.Q) then
+        -- Call the Teleport function with the mouse position
+        Teleport(Mouse.Hit.p)
+    end
+end)
