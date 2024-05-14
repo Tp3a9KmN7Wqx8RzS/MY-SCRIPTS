@@ -1,6 +1,6 @@
 -- Define the variables for teleportation behavior
 local teleportDistance = 20 -- Distance of each teleportation
-local teleportSpeed = 300 -- Speed of teleportation
+local teleportSpeed = 400 -- Speed of teleportation
 
 -- Retrieve the player and their character
 local player = game.Players.LocalPlayer
