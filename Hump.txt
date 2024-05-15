@@ -51,7 +51,7 @@ end
 
 local function moveBackAndForth()
     if attached and attachToPlayer then
-        local speed = 25 -- Adjust speed as needed
+        local speed = 15 -- Adjust speed as needed
         local distance = 5 -- Adjust distance as needed
         local offset = math.sin(tick() * speed) * distance
         humanoidRootPart.CFrame = attachToPlayer.CFrame * CFrame.new(0, 0, -5 - offset) -- Adjust distance as needed
@@ -157,7 +157,7 @@ local function updatePlatform()
 end
 
 game:GetService("UserInputService").InputBegan:Connect(onKeyPress)
-game:GetService("RunService").Stepped:Connect(moveBackAndForth)
+game:GetService("RunService").RenderStepped:Connect(moveBackAndForth)
 game:GetService("RunService").RenderStepped:Connect(updatePlatform)
 
 -- Check for character reset
