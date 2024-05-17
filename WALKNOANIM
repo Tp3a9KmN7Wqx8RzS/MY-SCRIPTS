@@ -1,0 +1,41 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local hb = RunService.Heartbeat
+local tpwalking = false -- Initially set to false
+local normalWalkSpeed = 16 -- Default Roblox WalkSpeed
+
+local function onCharacterAdded(char)
+    local hum = char:WaitForChild("Humanoid")
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    
+    hum.WalkSpeed = tpwalking and 0 or normalWalkSpeed
+
+    while true do
+        local delta = hb:Wait()
+        if tpwalking and hum.MoveDirection.Magnitude > 0 then
+            local moveDirection = hum.MoveDirection * 2 * delta * 10
+            rootPart.CFrame = rootPart.CFrame + moveDirection
+        end
+    end
+end
+
+local function toggleTpWalk()
+    tpwalking = not tpwalking
+    if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+        player.Character.Humanoid.WalkSpeed = tpwalking and 0 or normalWalkSpeed
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.V then
+        toggleTpWalk()
+    end
+end)
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then
+    onCharacterAdded(player.Character)
+end
