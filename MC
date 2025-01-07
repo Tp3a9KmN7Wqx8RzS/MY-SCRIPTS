@@ -1,0 +1,384 @@
+local targetPositions = {
+    Vector3.new(153, -11, 12),
+    Vector3.new(153, -11, 42),
+    Vector3.new(153, -11, 74),
+    Vector3.new(153, -11, 104),
+    Vector3.new(153, -11, 139)
+}
+
+local messages = {
+    "",
+    "",
+    "",
+    "",
+    ""
+}
+
+local function fireProximityPrompts(name)
+    if fireproximityprompt then
+        for _, descendant in ipairs(workspace:GetDescendants()) do
+            if descendant:IsA("ProximityPrompt") then
+                if not name or descendant.Name == name or descendant.Parent.Name == name then
+                    fireproximityprompt(descendant)
+                end
+            end
+        end
+    else
+        warn("Your exploit does not support firing Proximity Prompts.")
+    end
+end
+
+local function getRandomElement(list, exclude)
+    local element
+    repeat
+        element = list[math.random(1, #list)]
+    until element ~= exclude
+    return element
+end
+
+local function updateBoothText(message, previousColor, previousFont)
+    -- Enhanced Color List with Additional Colors
+    local colors = { "Red", "Teal", "Lace", "Sun", "Gray", "Cinder" }
+    local fonts = { "DenkOne" }
+
+    local randomColor = getRandomElement(colors, previousColor)
+    local randomFont = "DenkOne"
+
+    local args = {
+        [1] = message,
+        [2] = randomColor,
+        [3] = randomFont
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("UpdateBoothText"):FireServer(unpack(args))
+
+    return randomColor, randomFont
+end
+
+local function deleteBoothOwnership()
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local deleteBoothOwnershipEvent = replicatedStorage:FindFirstChild("DeleteBoothOwnership")
+    if deleteBoothOwnershipEvent and deleteBoothOwnershipEvent:IsA("RemoteEvent") then
+        deleteBoothOwnershipEvent:FireServer()
+    else
+        warn("DeleteBoothOwnership RemoteEvent not found.")
+    end
+end
+
+local function teleportToTarget(character, targetPosition)
+    character:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+end
+
+local function keepConstantYAxis(humanoidRootPart)
+    local bodyPosition = Instance.new("BodyPosition")
+    bodyPosition.Parent = humanoidRootPart
+    bodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyPosition.Position = humanoidRootPart.Position
+
+    local connection
+    connection = game:GetService("RunService").RenderStepped:Connect(function()
+        if humanoidRootPart and bodyPosition then
+            bodyPosition.Position = humanoidRootPart.Position
+        else
+            connection:Disconnect()
+        end
+    end)
+
+    return bodyPosition
+end
+
+local function executeTeleportationSequence()
+    local player = game.Players.LocalPlayer
+    if not player then
+        return
+    end
+
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        return
+    end
+
+    local originalPosition = humanoidRootPart.Position
+    local bodyPosition = keepConstantYAxis(humanoidRootPart)
+
+    local previousColor, previousFont = nil, nil
+
+    local noclipEnabled = true
+    local function noclip()
+        game:GetService("RunService").Stepped:Connect(function()
+            if noclipEnabled then
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+    noclip()
+
+    for i, position in ipairs(targetPositions) do
+        teleportToTarget(character, position)
+        wait(1.1) -- Maintains the original timing
+        fireProximityPrompts()
+        previousColor, previousFont = updateBoothText(messages[i], previousColor, previousFont)
+        deleteBoothOwnership()
+    end
+
+    noclipEnabled = false
+    teleportToTarget(character, originalPosition)
+
+    if bodyPosition then
+        bodyPosition:Destroy()
+    end
+end
+
+-- ===========================
+-- Enhanced UI Components
+-- ===========================
+
+-- Create ScreenGui
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MessageEditorUI"
+screenGui.Parent = playerGui
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+
+-- Create a Container Frame to hold both Shadow and Main UI
+local containerFrame = Instance.new("Frame")
+containerFrame.Size = UDim2.new(0, 250, 0, 350) -- Main UI size
+containerFrame.Position = UDim2.new(0.5, -125, 0.5, -175) -- Centered
+containerFrame.BackgroundTransparency = 1 -- Invisible container
+containerFrame.BorderSizePixel = 0
+containerFrame.Parent = screenGui
+
+-- Create Shadow Frame with Rounded Corners
+local shadowFrame = Instance.new("Frame")
+shadowFrame.Size = UDim2.new(1, 10, 1, 10) -- Slightly larger for shadow effect
+shadowFrame.Position = UDim2.new(0, 5, 0, 5) -- Offset to create shadow
+shadowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black shadow
+shadowFrame.BackgroundTransparency = 0.6 -- Semi-transparent
+shadowFrame.BorderSizePixel = 0
+shadowFrame.ZIndex = 0 -- Behind main frame
+shadowFrame.Parent = containerFrame
+
+-- Rounded corners for Shadow Frame
+local shadowCorner = Instance.new("UICorner")
+shadowCorner.CornerRadius = UDim.new(0.05, 0)
+shadowCorner.Parent = shadowFrame
+
+-- Create Main Frame with Rounded Corners
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(1, 0, 1, 0) -- Fits within containerFrame
+mainFrame.Position = UDim2.new(0, 0, 0, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Dark Grey
+mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 1 -- Above shadow
+mainFrame.Parent = containerFrame
+
+-- Rounded corners for Main Frame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0.05, 0)
+mainCorner.Parent = mainFrame
+
+-- Create a Content Frame inside Main Frame
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, 0, 1, 0)
+contentFrame.Position = UDim2.new(0, 0, 0, 0)
+contentFrame.BackgroundTransparency = 1
+contentFrame.BorderSizePixel = 0
+contentFrame.Parent = mainFrame
+
+-- Make the container frame draggable
+local UserInputService = game:GetService("UserInputService")
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    containerFrame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+contentFrame.InputBegan:Connect(function(inputObj)
+    if inputObj.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = inputObj.Position
+        startPos = containerFrame.Position
+
+        inputObj.Changed:Connect(function()
+            if inputObj.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+contentFrame.InputChanged:Connect(function(inputObj)
+    if inputObj.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = inputObj
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(inputObj)
+    if inputObj == dragInput and dragging then
+        update(inputObj)
+    end
+end)
+
+-- Create Title with Bubbly Text
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 40) -- Adjusted size for compactness
+title.Position = UDim2.new(0, 10, 0, 10)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40) -- Slightly lighter grey
+title.BackgroundTransparency = 0.2
+title.Text = "Edit Messages"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.SourceSansBold -- Using a Roblox-supported font
+title.TextWrapped = true
+title.Parent = contentFrame
+
+-- Rounded corners for the Title
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 5)
+titleCorner.Parent = title
+
+-- Create a Container for Message Boxes
+local messagesContainer = Instance.new("Frame")
+messagesContainer.Size = UDim2.new(1, -20, 1, -100) -- Adjusted to fit within Main Frame
+messagesContainer.Position = UDim2.new(0, 10, 0, 60) -- Positioned below Title
+messagesContainer.BackgroundTransparency = 1
+messagesContainer.Parent = contentFrame
+
+-- Function to Create a TextBox for Each Message with Rounded Corners
+local function createMessageBox(index)
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(1, 0, 0, 30) -- Smaller height for compactness
+    textBox.Position = UDim2.new(0, 0, 0, (index - 1) * 35) -- Spacing between boxes
+    textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- Darker grey
+    textBox.BorderSizePixel = 0
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.Text = "" -- Empty initial text
+    textBox.PlaceholderText = "Enter message " .. index -- Added placeholder
+    textBox.TextScaled = true
+    textBox.ClearTextOnFocus = false
+    textBox.Font = Enum.Font.SourceSansBold -- Using a Roblox-supported font
+    textBox.TextWrapped = true
+    textBox.Parent = messagesContainer
+
+    -- Rounded corners for each TextBox
+    local textBoxCorner = Instance.new("UICorner")
+    textBoxCorner.CornerRadius = UDim.new(0, 3)
+    textBoxCorner.Parent = textBox
+
+    return textBox
+end
+
+-- Create 5 TextBoxes for Messages
+local messageTextBoxes = {}
+for i = 1, 5 do
+    messageTextBoxes[i] = createMessageBox(i)
+end
+
+-- Create Execute Button with Rounded Corners
+local executeButton = Instance.new("TextButton")
+executeButton.Size = UDim2.new(1, -20, 0, 40) -- Adjusted size for compactness
+executeButton.Position = UDim2.new(0, 10, 1, -50) -- Positioned at the bottom with padding
+executeButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Blue color
+executeButton.BorderSizePixel = 0
+executeButton.Text = "Execute"
+executeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+executeButton.TextScaled = true
+executeButton.Font = Enum.Font.SourceSansBold -- Using a Roblox-supported font
+executeButton.TextWrapped = true
+executeButton.Parent = contentFrame
+
+-- Rounded corners for the Execute Button
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 5)
+buttonCorner.Parent = executeButton
+
+-- Add a Hover Effect to the Execute Button
+executeButton.MouseEnter:Connect(function()
+    executeButton.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+end)
+
+executeButton.MouseLeave:Connect(function()
+    executeButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+end)
+
+-- Function to Handle Execute Button Click
+executeButton.MouseButton1Click:Connect(function()
+    -- Update the messages table with the text from TextBoxes
+    for i = 1, 5 do
+        local newText = messageTextBoxes[i].Text
+        if newText and newText ~= "" then
+            messages[i] = newText
+        else
+            warn("Message " .. i .. " is empty. Using previous value.")
+        end
+    end
+    -- Execute the teleportation sequence
+    executeTeleportationSequence()
+end)
+
+-- ===========================
+-- Floating Voice Chat Button
+-- ===========================
+
+-- Create Voice Chat Button as part of the containerFrame
+local voiceChatButton = Instance.new("TextButton")
+voiceChatButton.Size = UDim2.new(0, 100, 0, 50) -- Adjust size as needed
+voiceChatButton.Position = UDim2.new(1, 10, 0.5, -25) -- Positioned to the right of the main UI
+voiceChatButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0) -- Green color
+voiceChatButton.BorderSizePixel = 0
+voiceChatButton.Text = "Refresh VoiceChat"
+voiceChatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+voiceChatButton.TextScaled = true
+voiceChatButton.Font = Enum.Font.SourceSansBold
+voiceChatButton.TextWrapped = true
+voiceChatButton.Parent = containerFrame -- Parent to the same containerFrame to ensure it moves with the main UI
+
+-- Adjust containerFrame size if necessary to accommodate the Voice Chat button
+-- Assuming the Voice Chat button is to the right, adjust containerFrame's width
+containerFrame.Size = UDim2.new(0, 360, 0, 350) -- Original 250 + 100 (Voice Chat button) + 10 (spacing)
+
+-- Reposition Shadow Frame and Main Frame accordingly
+shadowFrame.Size = UDim2.new(0.7, 10, 1, 10) -- Now 360 wide
+shadowFrame.Position = UDim2.new(-2, 5, 0, 5) -- Offset remains the same
+
+mainFrame.Size = UDim2.new(1, -110, 1, 0) -- 360 - 100 (Voice Chat button) - 10 (spacing)
+mainFrame.Position = UDim2.new(-2, 5, 0, 0)
+
+-- Position Voice Chat Button
+voiceChatButton.Position = UDim2.new(1, -800, 0.5, -155) -- 10 pixels to the right of the mainFrame
+
+-- Rounded corners for the Voice Chat Button
+local voiceChatCorner = Instance.new("UICorner")
+voiceChatCorner.CornerRadius = UDim.new(0, 10)
+voiceChatCorner.Parent = voiceChatButton
+
+-- Add a Hover Effect to the Voice Chat Button
+voiceChatButton.MouseEnter:Connect(function()
+    voiceChatButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+end)
+
+voiceChatButton.MouseLeave:Connect(function()
+    voiceChatButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+end)
+
+-- Function to Handle Voice Chat Button Click
+voiceChatButton.MouseButton1Click:Connect(function()
+    -- Execute the Voice Chat join function exactly as specified
+    pcall(function()
+        game:GetService("VoiceChatService"):joinVoice()
+    end)
+end)
